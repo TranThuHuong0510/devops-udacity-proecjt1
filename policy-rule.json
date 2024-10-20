@@ -1,0 +1,27 @@
+{
+    "mode": "All",
+    "policyRule": {
+      "if": {
+        "allOf": [
+          {
+            "field": "type",
+            "notIn": [
+              "Microsoft.Authorization/policyDefinitions",
+              "Microsoft.Authorization/policyAssignments",
+              "Microsoft.Authorization/policySetDefinitions",
+              "Microsoft.Resources/subscriptions",
+              "Microsoft.Resources/resourceGroups"
+            ]
+          },
+          {
+            "field": "tags",
+            "exists": "false"
+          }
+        ]
+      },
+      "then": {
+        "effect": "deny"
+      }
+    },
+    "parameters": {}
+  }

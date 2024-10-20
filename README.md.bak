@@ -48,4 +48,4 @@ Step 4: Deploy Server by Terraform
 - result will be list as my capture (Capture folder: 3 - Image-result.PNG)
 
 3, Check server is deployed
-- After you run terraform apply "solution.plan" , you can go to Azure Portal to check (Capture folder)
+- After you run terraform apply "solution.plan" , you can go to Azure Portal to check

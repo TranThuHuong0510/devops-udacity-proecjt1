@@ -1,7 +1,6 @@
 # Configure Azure provider
 provider "azurerm" {
   features {}
-  subscription_id = "64a9a252-e2ca-4cc3-af56-31bf09b86699"
 }
 
 # Resource group
@@ -14,7 +13,7 @@ resource "azurerm_resource_group" "main" {
 # Virtual network
 resource "azurerm_virtual_network" "main" {
   name                = "${var.prefix}-vnet"
-  address_space       = ["10.0.0.0/16"]
+  address_space       = ["10.0.0.0/22"]
   location            = azurerm_resource_group.main.location
   resource_group_name = azurerm_resource_group.main.name
   tags = var.tags
@@ -37,67 +36,65 @@ resource "azurerm_network_security_group" "main" {
   tags = var.tags
 }
 
-# Allow inbound HTTP traffic on port 80
-resource "azurerm_network_security_rule" "AllowInbound" {
-  name                        = "${var.prefix}-AllowInbound"
-  priority                    = 100
-  direction                   = "Inbound"
-  access                      = "Allow"
-  protocol                    = "*"
-  source_port_range           = "*"
-  destination_port_range      = "80"
-  source_address_prefix       = "*"
-  destination_address_prefix  = "*"
-  resource_group_name         = azurerm_resource_group.main.name
-  network_security_group_name = azurerm_network_security_group.main.name
+# Create security rules
+resource "azurerm_network_security_rule" "DenyAllInbound" {
+    name                         = "DenyAllInbound"
+    description                  = "This rule with low priority deny all the inbound traffic"
+    priority                     = 100
+    direction                    = "Inbound"
+    access                       = "Deny"
+    protocol                     = "*"
+    source_port_range            = "*"
+    destination_port_range       = "*"
+    source_address_prefix        = "*"
+    destination_address_prefix   = "*"
+    resource_group_name          = azurerm_resource_group.main.name
+    network_security_group_name  = azurerm_network_security_group.main.name
 }
 
-# resource "azurerm_network_security_rule" "AllowInbound-LB" {
-#   name                        = "${var.prefix}-AllowInbound-LB"
-#   priority                    = 150
-#   direction                   = "Inbound"
-#   access                      = "Allow"
-#   protocol                    = "*"
-#   source_port_range           = "*"
-#   destination_port_range      = "*"
-#   source_address_prefix       = "AzureLoadBalancer"
-#   destination_address_prefix  = "*"
-#   resource_group_name         = azurerm_resource_group.main.name
-#   network_security_group_name = azurerm_network_security_group.main.name
-# }
-
-# resource "azurerm_network_security_rule" "DenyFromInternet" {
-#   name                        = "${var.prefix}-DenyFromInternet"
-#   priority                    = 300
-#   direction                   = "Inbound"
-#   access                      = "Deny"
-#   protocol                    = "*"
-#   source_port_range           = "*"
-#   destination_port_range      = "*"
-#   source_address_prefix       = "*"
-#   destination_address_prefix  = "*"
-#   resource_group_name         = azurerm_resource_group.main.name
-#   network_security_group_name = azurerm_network_security_group.main.name
-# }
-
-resource "azurerm_network_security_rule" "AllowOutbound" {
-  name                        = "${var.prefix}-AllowOutbound"
-  priority                    = 200
-  direction                   = "Outbound"
-  access                      = "Allow"
-  protocol                    = "*"
-  source_port_range           = "*"
-  destination_port_range      = "*"
-  source_address_prefix       = "VirtualNetwork"
-  destination_address_prefix  = "VirtualNetwork"
-  resource_group_name         = azurerm_resource_group.main.name
-  network_security_group_name = azurerm_network_security_group.main.name
+resource "azurerm_network_security_rule" "AllowInboundSameVirtualNetwork" {
+    name                         = "AllowInboundSameVirtualNetwork"
+    description                  = "Allow inbound traffick inside the same Virtual Network"
+    priority                     = 101
+    direction                    = "Inbound"
+    access                       = "Allow"
+    protocol                     = "*"
+    source_port_range            = "*"
+    destination_port_range       = "*"
+    source_address_prefix        = "VirtualNetwork"
+    destination_address_prefix   = "VirtualNetwork"
+    resource_group_name          = azurerm_resource_group.main.name
+    network_security_group_name  = azurerm_network_security_group.main.name
 }
 
-# Subnet network security group association
-resource "azurerm_subnet_network_security_group_association" "main" {
-  subnet_id                 = azurerm_subnet.main.id
-  network_security_group_id = azurerm_network_security_group.main.id
+resource "azurerm_network_security_rule" "AllowOutboundSameVirtualNetwork" {
+    name                         = "AllowOutboundSameVirtualNetwork"
+    description                  = "Allow outbound traffick inside the same Virtual Network"
+    priority                     = 102
+    direction                    = "Outbound"
+    access                       = "Allow"
+    protocol                     = "*"
+    source_port_range            = "*"
+    destination_port_range       = "*"
+    source_address_prefix        = "VirtualNetwork"
+    destination_address_prefix   = "VirtualNetwork"
+    resource_group_name          = azurerm_resource_group.main.name
+    network_security_group_name  = azurerm_network_security_group.main.name
+}
+
+resource "azurerm_network_security_rule" "AllowHTTPTrafficFromLoadBalancer" {
+    name                         = "AllowHTTPTrafficFromLoadBalancer"
+    description                  = "Allow HTTP traffic to the VMs from the load balancer."
+    priority                     = 103
+    direction                    = "Inbound"
+    access                       = "Allow"
+    protocol                     = "Tcp"
+    source_port_range            = "*"
+    destination_port_range       = "*"
+    source_address_prefix        = "AzureLoadBalancer"
+    destination_address_prefix   = "VirtualNetwork"
+    resource_group_name          = azurerm_resource_group.main.name
+    network_security_group_name  = azurerm_network_security_group.main.name
 }
 
 
@@ -111,9 +108,17 @@ resource "azurerm_network_interface" "main" {
 
   ip_configuration {
     name                          = "internal"
+    primary                       = true
     subnet_id                     = azurerm_subnet.main.id
     private_ip_address_allocation = "Dynamic"
   }
+}
+
+# Connect the security group to the network interface
+resource "azurerm_network_interface_security_group_association" "my_security_group_association" {
+  count                     = var.VMnum
+  network_interface_id      = azurerm_network_interface.main[count.index].id
+  network_security_group_id = azurerm_network_security_group.main.id
 }
 
 # Load balancer
@@ -173,6 +178,15 @@ resource "azurerm_public_ip" "main" {
   tags = var.tags
 }
 
+resource "azurerm_availability_set" "main" {
+  name                = "${var.prefix}-availability-set"
+  location            = azurerm_resource_group.main.location
+  resource_group_name = azurerm_resource_group.main.name
+  platform_fault_domain_count = 2  
+  platform_update_domain_count = 5  
+  tags = var.tags
+}
+
 resource "azurerm_linux_virtual_machine" "main" {
   count                           = var.VMnum
   name                            = "${var.prefix}-vm${count.index}"
@@ -182,9 +196,7 @@ resource "azurerm_linux_virtual_machine" "main" {
   admin_username                  = "${var.admin_username}"
   admin_password                  = "${var.admin_password}"
   disable_password_authentication = false
-  network_interface_ids = [
-    azurerm_network_interface.main[count.index].id,
-  ]
+  network_interface_ids = [element(azurerm_network_interface.main.*.id, count.index)]
   source_image_id = "/subscriptions/${var.subscription_id}/resourceGroups/${var.packer_resource_group}/providers/Microsoft.Compute/images/${var.packer_image_name}"
 
   os_disk {
@@ -195,14 +207,6 @@ resource "azurerm_linux_virtual_machine" "main" {
   tags = var.tags
 }
 
-resource "azurerm_availability_set" "main" {
-  name                = "${var.prefix}-availability-set"
-  location            = azurerm_resource_group.main.location
-  resource_group_name = azurerm_resource_group.main.name
-  platform_fault_domain_count = 2  
-  platform_update_domain_count = 5  
-  tags = var.tags
-}
 
 resource "azurerm_managed_disk" "main" {
   count                = var.VMnum

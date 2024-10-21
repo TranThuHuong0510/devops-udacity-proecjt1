@@ -31,16 +31,6 @@ variable "location" {
   description = "The Azure Region in which all resources should be created."
   default = "southeastasia"
 }
-variable "number_vm" {
-  description = "Number of VMs."
-  default     = 1
-}
-
-variable "vm_size" {
-  default     = "Standard_B1s"
-  description = "VM SKU"
-}
-
 variable "subscription_id" {
     default     = "64a9a252-e2ca-4cc3-af56-31bf09b86699"
     description = "subscription_id"

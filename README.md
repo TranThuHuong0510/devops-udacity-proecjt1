@@ -31,7 +31,12 @@ Step 3: Create image by Packer
 Step 4: Deploy Server by Terraform
 1. Define Terraform templates (main.tf and vars.tf)
 2. Execute terraform init
-3. Change the vars.tf file according to your needs
+3. Open vars.tf file and change the information as your needs
+ - prefix: prefix name of all components created.
+ - location:Choose a location based on your needs to save costs. This location applies to all components.
+ - admin_username and admin_password: The username and password is the credential of all virtual machines created
+ - VMnum: Number of VM resources to be created behind the load balancer.
+
 4. Update image in the main.tf file(Image is created form step 2)
 4. Execute terraform plan -out solution.plan. It will ask your variables
 5. Execute terraform applly "solution.plan"

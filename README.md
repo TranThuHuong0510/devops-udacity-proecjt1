@@ -23,6 +23,7 @@ From Aruze Portal definition policy using policy rule is provided (policy-rule.j
 Step 2: Register app and get client_id, client_secret
 az ad sp create-for-rbac --name "name" --role "Contributor" --scopes "/subscriptions/{subscriptions_id}"
 
+
 Step 3: Create image by Packer
 1. Define server.json packer template
 2. variabales: Use a file or use environment variables to set variables (client_id, client_secret take from step 2)
